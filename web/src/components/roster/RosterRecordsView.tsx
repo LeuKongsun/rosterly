@@ -158,53 +158,65 @@ export function RosterRecordsView({
           </div>
         </div>
 
-        <div className="hidden grid-cols-7 border-b border-zinc-200/60 text-[0.72rem] font-semibold uppercase tracking-wider text-zinc-500 dark:border-white/5 dark:text-zinc-400 md:grid">
+        {/* Weekday header — visible on both mobile and desktop */}
+        <div className="grid grid-cols-7 border-b border-zinc-200/60 text-[0.72rem] font-semibold uppercase tracking-wider text-zinc-500 dark:border-white/5 dark:text-zinc-400">
           {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day) => (
-            <div key={day} className="border-r border-zinc-200/50 px-3 py-2 last:border-r-0 dark:border-white/5">{day}</div>
+            <div key={day} className="border-r border-zinc-200/50 px-1 py-2 text-center last:border-r-0 dark:border-white/5 md:px-3">{day}</div>
           ))}
         </div>
 
         {isLoading || isMonthLoading ? (
           <RosterCalendarSkeleton />
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-7">
+          <div className="grid grid-cols-7">
             {days.map((day) => {
               const weekStart = weekStartForDateOnly(day);
               const record = recordByWeek.get(weekStart);
               const dayShifts = shiftsByDay.get(day) ?? [];
               const isCurrentMonth = isSameMonth(day, visibleMonth);
               const isToday = day === toDateOnly(new Date());
-              const dayLabel = new Intl.DateTimeFormat("en-AU", { weekday: "short" }).format(parseDateOnly(day));
               const isPastDay = day < todayStr;
 
               return (
                 <div
                   key={day}
-                  className={`group flex min-h-[210px] flex-col border-b border-r border-zinc-200/50 p-3 transition-colors dark:border-white/5 md:min-h-[240px] md:last:border-r ${isCurrentMonth ? "bg-white/15 dark:bg-transparent" : "bg-zinc-100/35 text-zinc-400 dark:bg-zinc-900/25 dark:text-zinc-600"} ${isPastDay ? "opacity-60 bg-zinc-100/50 dark:bg-zinc-900/30 cursor-not-allowed" : ""}`}
+                  className={`group flex flex-col border-b border-r border-zinc-200/50 transition-colors dark:border-white/5 last:border-r-0
+                    p-1 min-h-[72px] md:p-3 md:min-h-[240px]
+                    ${isCurrentMonth ? "bg-white/15 dark:bg-transparent" : "bg-zinc-100/35 text-zinc-400 dark:bg-zinc-900/25 dark:text-zinc-600"}
+                    ${isPastDay ? "opacity-60 bg-zinc-100/50 dark:bg-zinc-900/30 cursor-not-allowed" : "cursor-pointer md:cursor-default"}`}
+                  onClick={() => {
+                    if (!isPastDay) onOpenRoster(weekStart);
+                  }}
                 >
-                  <div className="mb-2 flex items-start justify-between gap-2">
-                    <div className="flex min-w-0 items-start gap-1.5">
-                      <div className={`rounded-md px-2 py-1 text-left ${isToday ? "bg-indigo-600 text-white dark:bg-indigo-500" : "text-zinc-800 dark:text-zinc-200"}`}>
-                        <span className="block text-[0.66rem] font-bold uppercase tracking-wider opacity-70 md:hidden">{dayLabel}</span>
-                        <span className="block text-sm font-black">{Number(day.slice(-2))}</span>
-                      </div>
-                      {canManage && !isPastDay ? (
-                        <button
-                          type="button"
-                          title={`Add shift on ${formatShortDate(day)}`}
-                          aria-label={`Add shift on ${formatShortDate(day)}`}
-                          className="inline-flex h-7 w-7 flex-none items-center justify-center rounded-md border border-zinc-200/80 bg-white/70 text-zinc-500 opacity-0 transition-all hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-700 focus:opacity-100 group-hover:opacity-100 dark:border-white/10 dark:bg-zinc-900/60 dark:text-zinc-400 dark:hover:border-indigo-500/30 dark:hover:bg-indigo-500/10 dark:hover:text-indigo-300"
-                          onClick={() => onAddShift(day)}
-                        >
-                          <Plus size={14} />
-                        </button>
-                      ) : null}
+                  {/* Day number + status badge */}
+                  <div className="flex items-start justify-between gap-1 mb-1">
+                    <div className={`rounded px-1 py-0.5 text-left ${isToday ? "bg-indigo-600 text-white dark:bg-indigo-500" : "text-zinc-800 dark:text-zinc-200"}`}>
+                      <span className="block text-[0.65rem] font-black leading-none">{Number(day.slice(-2))}</span>
                     </div>
-                    <WeekStatus record={record} onOpenRoster={() => onOpenRoster(weekStart)} />
+                    {/* Desktop: show add button on hover */}
+                    {canManage && !isPastDay ? (
+                      <button
+                        type="button"
+                        title={`Add shift on ${formatShortDate(day)}`}
+                        aria-label={`Add shift on ${formatShortDate(day)}`}
+                        className="hidden md:inline-flex h-7 w-7 flex-none items-center justify-center rounded-md border border-zinc-200/80 bg-white/70 text-zinc-500 opacity-0 transition-all hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-700 focus:opacity-100 group-hover:opacity-100 dark:border-white/10 dark:bg-zinc-900/60 dark:text-zinc-400 dark:hover:border-indigo-500/30 dark:hover:bg-indigo-500/10 dark:hover:text-indigo-300"
+                        onClick={(e) => { e.stopPropagation(); onAddShift(day); }}
+                      >
+                        <Plus size={14} />
+                      </button>
+                    ) : null}
+                    {/* Mobile: compact status dot */}
+                    <span className="md:hidden">
+                      <MobileWeekDot record={record} />
+                    </span>
+                    {/* Desktop: full status badge */}
+                    <span className="hidden md:inline-flex">
+                      <WeekStatus record={record} onOpenRoster={() => onOpenRoster(weekStart)} />
+                    </span>
                   </div>
 
-                  <div
-                    className={`flex min-h-0 flex-1 flex-col gap-1.5 rounded-lg ${canManage && !isPastDay ? "cursor-copy" : ""}`}
+                  {/* Shift list — desktop only (full cards), mobile shows dots */}
+                  <div className="hidden md:flex min-h-0 flex-1 flex-col gap-1.5 rounded-lg"
                     onClick={(event) => {
                       if (canManage && !isPastDay && event.target === event.currentTarget) {
                         onAddShift(day);
@@ -216,10 +228,7 @@ export function RosterRecordsView({
                         key={shift.id}
                         type="button"
                         className="rounded-lg border border-sky-200/80 bg-sky-50/80 px-2.5 py-2 text-left text-sky-950 transition-all hover:border-sky-300 hover:bg-sky-100/80 focus:outline-none focus:ring-2 focus:ring-sky-400/30 dark:border-sky-500/20 dark:bg-sky-950/30 dark:text-sky-100 dark:hover:border-sky-400/40 dark:hover:bg-sky-950/50"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          onEditShift(shift);
-                        }}
+                        onClick={(event) => { event.stopPropagation(); onEditShift(shift); }}
                       >
                         <span className="mb-1 flex items-center gap-1.5 text-[0.68rem] font-bold text-sky-700/80 dark:text-sky-300/80">
                           <Clock size={12} />
@@ -235,10 +244,7 @@ export function RosterRecordsView({
                       <button
                         type="button"
                         className="rounded-md px-2 py-1 text-left text-[0.72rem] font-bold text-zinc-500 transition-colors hover:bg-white/70 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-white"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          onOpenRoster(weekStart);
-                        }}
+                        onClick={(event) => { event.stopPropagation(); onOpenRoster(weekStart); }}
                       >
                         +{dayShifts.length - 4} more
                       </button>
@@ -253,6 +259,18 @@ export function RosterRecordsView({
                       {canManage && !isPastDay ? "Click blank space to add shift" : ""}
                     </button>
                   </div>
+
+                  {/* Mobile: compact shift count dots */}
+                  {dayShifts.length > 0 && (
+                    <div className="md:hidden flex flex-wrap gap-0.5 mt-0.5">
+                      {dayShifts.slice(0, 3).map((shift) => (
+                        <span key={shift.id} className="h-1 w-1 rounded-full bg-sky-500 dark:bg-sky-400" />
+                      ))}
+                      {dayShifts.length > 3 && (
+                        <span className="h-1 w-1 rounded-full bg-zinc-400" />
+                      )}
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -260,6 +278,17 @@ export function RosterRecordsView({
         )}
       </div>
     </>
+  );
+}
+
+function MobileWeekDot({ record }: { record?: RosterRecord }) {
+  if (!record) return null;
+  return (
+    <span className={`inline-block h-1.5 w-1.5 rounded-full mt-0.5 ${
+      record.status === "published"
+        ? "bg-emerald-500 dark:bg-emerald-400"
+        : "bg-amber-500 dark:bg-amber-400"
+    }`} />
   );
 }
 
@@ -289,12 +318,10 @@ function WeekStatus({ record, onOpenRoster }: { record?: RosterRecord; onOpenRos
 
 function RosterCalendarSkeleton() {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-7">
+    <div className="grid grid-cols-7">
       {Array.from({ length: 35 }, (_, index) => (
-        <div key={index} className="min-h-[210px] border-b border-r border-zinc-200/50 p-3 dark:border-white/5 md:min-h-[240px]">
-          <span className="skeleton-cell h-5 max-w-[52px]" />
-          <span className="skeleton-cell mt-4 h-12 max-w-full" />
-          <span className="skeleton-cell mt-2 h-12 max-w-full" />
+        <div key={index} className="min-h-[72px] border-b border-r border-zinc-200/50 p-1 dark:border-white/5 md:min-h-[240px] md:p-3">
+          <span className="skeleton-cell h-4 max-w-[20px]" />
         </div>
       ))}
     </div>

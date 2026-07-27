@@ -159,60 +159,7 @@ export function CalendarRosterView({
     const dayShifts = activeDay ? shiftsForDay(activeDay) : [];
     const isActiveDayPast = activeDay ? activeDay < todayStr : false;
 
-    if (timeframeView === "day") {
-      return (
-        <div className="flex flex-col gap-4 w-full">
-          {/* Selected Day Details Section */}
-          {activeDay && (
-            <div className="rounded-2xl border border-zinc-200/50 bg-white/60 p-4 shadow-sm dark:border-white/5 dark:bg-zinc-950/20 backdrop-blur-xl flex flex-col gap-3 animate-in fade-in slide-in-from-bottom-3 duration-500">
-              <div className="flex items-center justify-between border-b border-zinc-200/50 pb-2.5 dark:border-white/5">
-                <div>
-                  <p className="text-[0.65rem] font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
-                    {weekday(activeDay)}
-                  </p>
-                  <h4 className="text-sm font-extrabold text-zinc-950 dark:text-white">
-                    {formatShortDate(activeDay)}
-                  </h4>
-                </div>
-                {canManage && !isActiveDayPast && (
-                  <button
-                    type="button"
-                    onClick={() => onAddShift(activeDay)}
-                    className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-500 shadow-sm transition-all duration-300 cursor-pointer"
-                  >
-                    <Plus size={12} />
-                    <span>Add shift</span>
-                  </button>
-                )}
-              </div>
-
-              <div className="flex flex-col gap-2.5">
-                {dayShifts.length > 0 ? (
-                  dayShifts.map((shift) => (
-                    <div key={shift.id} className="min-h-[74px]">
-                      <ShiftTile
-                        shift={shift}
-                        isSelected={shift.id === selectedShiftId}
-                        canManage={canManage}
-                        onSelect={onSelectShift}
-                        onDragStart={() => {}}
-                        onDragEnd={() => {}}
-                      />
-                    </div>
-                  ))
-                ) : (
-                  <div className="py-6 text-center text-xs text-zinc-400 dark:text-zinc-500 font-medium">
-                    No shifts scheduled for this day.
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-      );
-    }
-
-    // timeframeView === "month" || timeframeView === "week"
+    // Always show compact month grid on mobile for all timeframe views (day/week/month)
     const visibleDates = (() => {
       if (timeframeView === "month") {
         const firstDay = days[0];
@@ -226,7 +173,8 @@ export function CalendarRosterView({
           }
         );
       } else {
-        return days;
+        // day and week: show the days as-is
+        return days as (string | null)[];
       }
     })();
 
@@ -240,80 +188,136 @@ export function CalendarRosterView({
     };
 
     return (
-      <div className="rounded-2xl border border-zinc-200/50 bg-white/60 p-2 shadow-sm dark:border-white/5 dark:bg-zinc-950/20 backdrop-blur-xl animate-in fade-in slide-in-from-bottom-2 duration-300 w-full overflow-hidden">
-        {/* Weekday headers */}
-        <div className="grid grid-cols-7 mb-2 text-center border-b border-zinc-200/40 pb-1.5 dark:border-white/5">
-          {["M", "T", "W", "T", "F", "S", "S"].map((label, idx) => (
-            <span
-              key={idx}
-              className="text-[0.65rem] font-black uppercase tracking-widest text-zinc-400 dark:text-zinc-500"
-            >
-              {label}
-            </span>
-          ))}
-        </div>
-
-        {/* Days Grid */}
-        <div className="grid grid-cols-7 gap-1">
-          {visibleDates.map((day, index) => {
-            if (!day) {
-              return <div key={`empty-${index}`} className="aspect-square bg-zinc-50/10 rounded-lg dark:bg-white/[0.005]" />;
-            }
-
-            const dayShifts = shiftsForDay(day);
-            const dayNumber = new Date(`${day}T00:00:00`).getDate();
-            const isPastDay = day < todayStr;
-            const isToday = day === todayStr;
-
-            return (
-              <div
-                key={day}
-                onClick={() => {
-                  if (canManage && !isPastDay) {
-                    onAddShift(day);
-                  } else {
-                    setSelectedDayState(day);
-                  }
-                }}
-                className={`flex flex-col items-stretch rounded-lg p-1 min-h-[75px] border transition-all duration-200 cursor-pointer ${
-                  isToday
-                    ? "bg-indigo-50/30 border-indigo-200 dark:bg-indigo-950/10 dark:border-indigo-500/30"
-                    : "bg-white/40 border-zinc-100 dark:bg-zinc-950/10 dark:border-white/[0.02]"
-                } hover:bg-zinc-50/80 dark:hover:bg-zinc-900/40`}
+      <div className="flex flex-col gap-3 w-full animate-in fade-in slide-in-from-bottom-2 duration-300">
+        {/* Compact calendar grid */}
+        <div className="rounded-2xl border border-zinc-200/50 bg-white/60 p-2 shadow-sm dark:border-white/5 dark:bg-zinc-950/20 backdrop-blur-xl w-full overflow-hidden">
+          {/* Weekday headers */}
+          <div className="grid grid-cols-7 mb-2 text-center border-b border-zinc-200/40 pb-1.5 dark:border-white/5">
+            {["M", "T", "W", "T", "F", "S", "S"].map((label, idx) => (
+              <span
+                key={idx}
+                className="text-[0.65rem] font-black uppercase tracking-widest text-zinc-400 dark:text-zinc-500"
               >
-                <span className={`text-[0.68rem] font-extrabold ${isToday ? "text-indigo-600 dark:text-indigo-400" : "text-zinc-700 dark:text-zinc-300"} mb-1`}>
-                  {dayNumber}
-                </span>
-                
-                <div className="flex flex-col gap-0.5 overflow-hidden">
-                  {dayShifts.map((shift) => {
-                    const colors = getShiftColorStyles(shift.memberId, shift.member.displayName);
-                    const shortName = shift.member.displayName.split(" ")[0];
-                    const startTime = formatShortTime(shift.startsAt);
-                    const endTime = formatShortTime(shift.endsAt);
+                {label}
+              </span>
+            ))}
+          </div>
 
-                    return (
-                      <button
-                        key={shift.id}
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onSelectShift(shift.id);
-                        }}
-                        className={`text-[0.55rem] font-bold py-0.5 px-1 rounded border text-left truncate w-full transition-all duration-150 ${colors.tile} ${
-                          shift.id === selectedShiftId ? "ring-1 ring-indigo-500" : ""
-                        }`}
-                      >
-                        <span className="block truncate leading-none">{shortName}</span>
-                        <span className="text-[0.5rem] opacity-75 leading-none block mt-0.5 truncate">{startTime}-{endTime}</span>
-                      </button>
-                    );
-                  })}
+          {/* Days Grid */}
+          <div className="grid grid-cols-7 gap-1">
+            {visibleDates.map((day, index) => {
+              if (!day) {
+                return <div key={`empty-${index}`} className="aspect-square bg-zinc-50/10 rounded-lg dark:bg-white/[0.005]" />;
+              }
+
+              const dayShifts = shiftsForDay(day);
+              const dayNumber = new Date(`${day}T00:00:00`).getDate();
+              const isPastDay = day < todayStr;
+              const isToday = day === todayStr;
+              const isSelected = day === activeDay;
+
+              return (
+                <div
+                  key={day}
+                  onClick={() => setSelectedDayState(day)}
+                  className={`flex flex-col items-stretch rounded-lg p-1 min-h-[60px] border transition-all duration-200 cursor-pointer ${
+                    isSelected
+                      ? "bg-indigo-50/60 border-indigo-400 dark:bg-indigo-950/20 dark:border-indigo-400/60 ring-1 ring-indigo-400/40"
+                      : isToday
+                      ? "bg-indigo-50/30 border-indigo-200 dark:bg-indigo-950/10 dark:border-indigo-500/30"
+                      : "bg-white/40 border-zinc-100 dark:bg-zinc-950/10 dark:border-white/[0.02]"
+                  } hover:bg-zinc-50/80 dark:hover:bg-zinc-900/40`}
+                >
+                  <span className={`text-[0.68rem] font-extrabold mb-0.5 ${
+                    isSelected
+                      ? "text-indigo-600 dark:text-indigo-400"
+                      : isToday
+                      ? "text-indigo-500 dark:text-indigo-400"
+                      : isPastDay
+                      ? "text-zinc-400 dark:text-zinc-500"
+                      : "text-zinc-700 dark:text-zinc-300"
+                  }`}>
+                    {dayNumber}
+                  </span>
+
+                  <div className="flex flex-col gap-0.5 overflow-hidden">
+                    {dayShifts.map((shift) => {
+                      const colors = getShiftColorStyles(shift.memberId, shift.member.displayName);
+                      const shortName = shift.member.displayName.split(" ")[0];
+                      const startTime = formatShortTime(shift.startsAt);
+                      const endTime = formatShortTime(shift.endsAt);
+
+                      return (
+                        <button
+                          key={shift.id}
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedDayState(day);
+                            onSelectShift(shift.id);
+                          }}
+                          className={`text-[0.55rem] font-bold py-0.5 px-1 rounded border text-left truncate w-full transition-all duration-150 ${colors.tile} ${
+                            shift.id === selectedShiftId ? "ring-1 ring-indigo-500" : ""
+                          }`}
+                        >
+                          <span className="block truncate leading-none">{shortName}</span>
+                          <span className="text-[0.5rem] opacity-75 leading-none block mt-0.5 truncate">{startTime}-{endTime}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
+
+        {/* Selected Day Detail Panel */}
+        {activeDay && (
+          <div className="rounded-2xl border border-zinc-200/50 bg-white/60 p-4 shadow-sm dark:border-white/5 dark:bg-zinc-950/20 backdrop-blur-xl flex flex-col gap-3 animate-in fade-in slide-in-from-bottom-3 duration-300">
+            <div className="flex items-center justify-between border-b border-zinc-200/50 pb-2.5 dark:border-white/5">
+              <div>
+                <p className="text-[0.65rem] font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
+                  {weekday(activeDay)}
+                </p>
+                <h4 className="text-sm font-extrabold text-zinc-950 dark:text-white">
+                  {formatShortDate(activeDay)}
+                </h4>
+              </div>
+              {canManage && !isActiveDayPast && (
+                <button
+                  type="button"
+                  onClick={() => onAddShift(activeDay)}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-500 shadow-sm transition-all duration-300 cursor-pointer"
+                >
+                  <Plus size={12} />
+                  <span>Add shift</span>
+                </button>
+              )}
+            </div>
+
+            <div className="flex flex-col gap-2.5">
+              {dayShifts.length > 0 ? (
+                dayShifts.map((shift) => (
+                  <div key={shift.id} className="min-h-[74px]">
+                    <ShiftTile
+                      shift={shift}
+                      isSelected={shift.id === selectedShiftId}
+                      canManage={canManage}
+                      onSelect={onSelectShift}
+                      onDragStart={() => {}}
+                      onDragEnd={() => {}}
+                    />
+                  </div>
+                ))
+              ) : (
+                <div className="py-6 text-center text-xs text-zinc-400 dark:text-zinc-500 font-medium">
+                  No shifts scheduled for this day.
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     );
   }
